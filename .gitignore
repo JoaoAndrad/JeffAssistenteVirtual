@@ -1,0 +1,26 @@
+# Node
+node_modules/
+.env
+logs/
+temp/
+auth_info/
+*.log
+.DS_Store
+*.sqlite
+*.sqlite3
+*.bak
+*.tmp
+*.swp
+*.swo
+*.zip
+*.tar.gz
+*.tgz
+*.env.*
+# Firebase emulador
+firebase-debug.log
+firebase-debug.*.log
+# VSCode
+.vscode/
+# Credenciais sensíveis
+credentials.json
+commands/firebaseFolder/firebaseUtils/credentials.json

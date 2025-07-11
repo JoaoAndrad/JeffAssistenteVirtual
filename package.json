@@ -1,0 +1,42 @@
+{
+    "name": "assistente-financeiro",
+    "version": "0.7.5",
+    "description": "Bot de Assistente Financeiro para WhatsApp: registre transações, consulte saldo, gere relatórios, crie lembretes e integre com Firebase, tudo via comandos inteligentes e NLP.",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js",
+        "dev": "nodemon index.js",
+        "test-firebase": "node commands/firebaseFolder/firebaseTeste.js",
+        "setup-firestore": "node commands/firebaseFolder/setupFirestore.js"
+    },
+    "keywords": [
+        "whatsapp",
+        "bot",
+        "baileys",
+        "assistente financeiro"
+    ],
+    "author": "João Andrade",
+    "license": "ISC",
+    "dependencies": {
+        "@whiskeysockets/baileys": "^6.7.12",
+        "moment-timezone": "^0.5.40",
+        "qrcode-terminal": "^0.12.0",
+        "@napi-rs/canvas": "^0.1.40",
+        "node-schedule": "^2.1.0",
+        "dotenv": "^16.0.3",
+        "winston": "^3.8.2",
+        "googleapis": "^118.0.0",
+        "date-fns-tz": "^2.0.0",
+        "natural": "^5.0.3",
+        "node-nlp": "^4.0.0",
+        "string-similarity": "^4.0.4",
+        "firebase-admin": "^11.10.1",
+        "express": "^4.18.0",
+        "fast-levenshtein": "^3.0.0",
+        "@hapi/boom": "^10.0.0",
+        "fluent-ffmpeg": "^2.1.2"
+    },
+    "devDependencies": {
+        "nodemon": "^3.0.1"
+    }
+}

@@ -1,0 +1,31 @@
+# ⚙️ Configuração Squarecloud
+
+# Arquivo: squarecloud.config
+DISPLAY_NAME=Bot Financeiro WhatsApp
+DESCRIPTION=Bot para gestão financeira com integração mobile
+AVATAR=https://example.com/avatar.png
+
+# Recursos
+MEMORY=1024
+VERSION=recommended
+SUBDOMAIN=financeiro-bot
+
+# Variáveis de ambiente
+MAIN=index.js
+PORT=3000
+NODE_ENV=production
+
+# Auto restart
+RESTART=true
+
+# Comandos de start
+START=node index.js
+
+# Arquivo .gitignore para Squarecloud
+node_modules/
+*.log
+*.tmp
+.env
+auth_info_baileys/
+temp/
+logs/

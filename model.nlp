@@ -1,0 +1,446 @@
+{
+  "settings": {
+    "languages": [
+      "pt"
+    ],
+    "forceNER": true,
+    "tag": "nlp",
+    "threshold": 0.5,
+    "autoLoad": true,
+    "autoSave": true,
+    "modelFileName": "model.nlp",
+    "executeActionsBeforeAnswers": false,
+    "calculateSentiment": true
+  },
+  "nluManager": {
+    "settings": {
+      "tag": "nlu-manager"
+    },
+    "locales": [
+      "pt"
+    ],
+    "languageNames": {},
+    "domainManagers": {
+      "pt": {
+        "settings": {
+          "locale": "pt",
+          "trainByDomain": false,
+          "tag": "domain-manager-pt",
+          "nluByDomain": {
+            "default": {
+              "className": "NeuralNlu",
+              "settings": {}
+            }
+          },
+          "useStemDict": true
+        },
+        "stemDict": {},
+        "intentDict": {},
+        "sentences": [],
+        "domains": {
+          "master_domain": {
+            "settings": {
+              "locale": "pt",
+              "tag": "nlu-pt",
+              "keepStopwords": true,
+              "nonefeatureValue": 1,
+              "nonedeltaMultiplier": 1.2,
+              "spellCheck": false,
+              "spellCheckDistance": 1,
+              "filterZeros": true,
+              "log": true
+            },
+            "features": {},
+            "intents": {},
+            "intentFeatures": {},
+            "featuresToIntent": {},
+            "neuralNetwork": {
+              "settings": {
+                "locale": "pt",
+                "tag": "nlu-pt",
+                "keepStopwords": true,
+                "nonefeatureValue": 1,
+                "nonedeltaMultiplier": 1.2,
+                "spellCheck": false,
+                "spellCheckDistance": 1,
+                "filterZeros": true,
+                "log": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "intentDomains": {},
+    "extraSentences": []
+  },
+  "ner": {
+    "settings": {
+      "tag": "ner",
+      "entityPreffix": "%",
+      "entitySuffix": "%"
+    },
+    "rules": {
+      "pt": {
+        "tipo": {
+          "name": "tipo",
+          "type": "enum",
+          "rules": [
+            {
+              "option": "despesa",
+              "texts": [
+                "gastei",
+                "paguei",
+                "comprei",
+                "investi",
+                "desembolsei",
+                "despesa",
+                "debitou",
+                "saquei",
+                "fiz compra",
+                "contraí dívida",
+                "fiz pagamento",
+                "queimei dinheiro",
+                "saiu",
+                "retirei",
+                "adicionei custo",
+                "tive gasto"
+              ]
+            },
+            {
+              "option": "receita",
+              "texts": [
+                "recebi",
+                "ganhei",
+                "lucrei",
+                "rendeu",
+                "faturei",
+                "receita",
+                "obtive",
+                "arrecadei",
+                "me pagaram",
+                "entrou grana",
+                "caiu na conta",
+                "conquistei",
+                "adquiri",
+                "herdei",
+                "consegui",
+                "fiz venda"
+              ]
+            }
+          ]
+        },
+        "categoria": {
+          "name": "categoria",
+          "type": "enum",
+          "rules": [
+            {
+              "option": "alimentacao",
+              "texts": [
+                "iFood",
+                "lanche",
+                "pizza",
+                "restaurante",
+                "sushi",
+                "hamburgueria",
+                "delivery",
+                "cafeteria"
+              ]
+            },
+            {
+              "option": "serviços",
+              "texts": [
+                "assinatura",
+                "assinaturas",
+                "serviço de streaming",
+                "seviço",
+                "serviços",
+                "squarecloud",
+                "spotify",
+                "netflix",
+                "disney+",
+                "youtube premium",
+                "amazon prime",
+                "operadora",
+                "claro",
+                "vivo",
+                "tim",
+                "oi",
+                "streaming",
+                "crédito",
+                "apple music",
+                "deezer",
+                "globo play",
+                "hbo max",
+                "paramount+",
+                "serviço de email",
+                "nuvem",
+                "dropbox",
+                "google one",
+                "office 365",
+                "onlyfans",
+                "twitch",
+                "patreon",
+                "serviço de assinatura",
+                "plano anual",
+                "streaming",
+                "hulu",
+                "discovery+",
+                "twitch prime",
+                "vimeo",
+                "playstation plus",
+                "xbox live"
+              ]
+            },
+            {
+              "option": "mercado",
+              "texts": [
+                "mercado",
+                "feira",
+                "padaria",
+                "açougue",
+                "quitanda",
+                "empório",
+                "mercadinho",
+                "psiu",
+                "cabral",
+                "mercearia",
+                "loja de conveniência",
+                "sacolão",
+                "hipermercado",
+                "varejão",
+                "distribuidora",
+                "depósito",
+                "lojinha",
+                "minimercado",
+                "hortifruti",
+                "supermercado online",
+                "bazar",
+                "sushi shop"
+              ]
+            },
+            {
+              "option": "salario",
+              "texts": [
+                "salario",
+                "salário",
+                "renda",
+                "receita",
+                "pagamento",
+                "pro-labore",
+                "honorários",
+                "ordenado",
+                "remuneração",
+                "vencimentos",
+                "bonificação",
+                "comissão",
+                "gorjeta",
+                "ajuda de custo",
+                "bolsa",
+                "benefício",
+                "13º",
+                "férias",
+                "PLR",
+                "participação nos lucros",
+                "salário extra",
+                "bônus de desempenho"
+              ]
+            },
+            {
+              "option": "casa",
+              "texts": [
+                "condomínio",
+                "IPTU",
+                "gás",
+                "tv a cabo",
+                "manutenção",
+                "reforma",
+                "decoração",
+                "jardim",
+                "limpeza",
+                "seguro residencial",
+                "faxina",
+                "piscina",
+                "lavanderia",
+                "cuidados domésticos",
+                "encanamento",
+                "elétrica",
+                "pintura"
+              ]
+            },
+            {
+              "option": "lazer",
+              "texts": [
+                "lazer",
+                "diversão",
+                "entretenimento",
+                "cultura",
+                "esporte",
+                "bebida",
+                "viagem",
+                "pub",
+                "parque de diversões",
+                "bar",
+                "balada",
+                "festa",
+                "evento",
+                "jogo",
+                "hobby",
+                "passatempo",
+                "museu",
+                "teatro",
+                "zoológico",
+                "aquário",
+                "karaokê",
+                "cinema",
+                "shopping"
+              ]
+            },
+            {
+              "option": "transporte",
+              "texts": [
+                "gasolina",
+                "pedágio",
+                "estacionamento",
+                "mecânico",
+                "lavagem",
+                "seguro do carro",
+                "IPVA",
+                "licenciamento",
+                "oficina",
+                "bicicleta",
+                "patinete",
+                "aluguel de carro",
+                "blablacar",
+                "posto",
+                "auto-elétrico",
+                "uber",
+                "uber moto",
+                "99",
+                "indriver",
+                "in driver",
+                "onibus",
+                "carro elétrico",
+                "táxi"
+              ]
+            },
+            {
+              "option": "saude",
+              "texts": [
+                "plano de saúde",
+                "médico",
+                "dentista",
+                "fisioterapeuta",
+                "psicólogo",
+                "farmácia",
+                "remédio",
+                "exame",
+                "laboratório",
+                "ótica",
+                "academia",
+                "nutricionista",
+                "personal trainer",
+                "suplemento",
+                "pilates",
+                "psiquiatra",
+                "tratamento estético",
+                "homeopatia"
+              ]
+            },
+            {
+              "option": "educacao",
+              "texts": [
+                "faculdade",
+                "curso",
+                "livro",
+                "material escolar",
+                "escola",
+                "universidade",
+                "workshop",
+                "palestra",
+                "seminário",
+                "concurso",
+                "certificação",
+                "idiomas",
+                "kumon",
+                "escola de música",
+                "mentoria",
+                "coaching",
+                "aprendizado online"
+              ]
+            }
+          ]
+        },
+        "conta": {
+          "name": "conta",
+          "type": "enum",
+          "rules": [
+            {
+              "option": "conta",
+              "texts": [
+                "inter",
+                "next",
+                "picpay",
+                "meliuz",
+                "banco digital",
+                "banco tradicional",
+                "conta corrente",
+                "poupança",
+                "investimento",
+                "CDB",
+                "criptomoeda",
+                "conjunta",
+                "empresarial",
+                "paypal",
+                "conta salário",
+                "nuconta",
+                "bradesco",
+                "itau",
+                "caixa econômica"
+              ]
+            }
+          ]
+        },
+        "valor": {
+          "name": "valor",
+          "type": "enum",
+          "rules": [
+            {
+              "option": "valor",
+              "texts": [
+                "10 reais",
+                "15",
+                "99,90",
+                "120.00",
+                "200",
+                "300,50",
+                "R$400",
+                "500 reais",
+                "mil reais",
+                "1000",
+                "2.000,00",
+                "20 reais",
+                "30",
+                "50,00",
+                "100.00"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "nlgManager": {
+    "settings": {
+      "tag": "nlg-manager"
+    },
+    "responses": {}
+  },
+  "actionManager": {
+    "settings": {
+      "tag": "action-manager"
+    },
+    "actions": {}
+  },
+  "slotManager": {}
+}
