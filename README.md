@@ -1,10 +1,20 @@
 # 🤖 Assistente Virtual para WhatsApp — Finanças & Rotinas
 
-Olá, me chamo Jeff e sou seu assistente inteligente para WhatsApp, projetado para ajudar no **gerenciamento financeiro pessoal** e na **organização de rotinas e tarefas**, com suporte a linguagem natural, gráficos, lembretes e muito mais.
+Olá, me chamo **Jeff** e sou seu assistente inteligente para WhatsApp, projetado para ajudar no **gerenciamento financeiro pessoal** e na **organização de rotinas e tarefas**, com suporte a linguagem natural, gráficos, lembretes e muito mais.
 
 ## 📌 Visão Geral
 
 Este projeto utiliza a biblioteca [Baileys](https://github.com/WhiskeySockets/Baileys) para se conectar ao WhatsApp de forma não oficial, permitindo a automação de interações com usuários. Ele combina funcionalidades de **controle financeiro**, **organização de tempo** e **produtividade**, com dados persistidos via Firebase e suporte a comandos por texto ou áudio.
+
+## 🚧 Em desenvolvimento
+
+As seguintes funcionalidades estão atualmente em construção para expandir ainda mais a capacidade do assistente:
+
+- 🔗 Integração com **Google Calendar** para sincronização bidirecional de eventos
+- ⏰ Sistema nativo de **alarmes e lembretes inteligentes** além das mensagens enviadas via WhatsApp
+- 🗣️ Integração com **Alexa** através de uma skill personalizada para comandos por voz, comunicação da alexa direto com a API REST
+
+Esses recursos permitirão eu Jeff atue como uma ponte entre sua rotina digital e seus dispositivos inteligentes.
 
 ## 🔧 Funcionalidades
 
