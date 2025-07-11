@@ -725,7 +725,7 @@ async function analisarRotinaViaGroq(texto) {
             '  "isTask": true',
             "}",
             "",
-            "Mensagem: 'daqui a 20 minutos eu vou tomar café'",
+            "Mensagem: 'me lembra daqui a 20 minutos eu vou tomar café'",
             "Resposta:",
             "{",
             `  "dayOrDate": "${saoPauloNow.clone().add(20, 'minutes').format('YYYY-MM-DD')}",`,
@@ -764,7 +764,7 @@ async function analisarRotinaViaGroq(texto) {
             '  "isTask": true',
             "}",
 
-            "Mensagem: 'em 2 horas revisar o relatório'",
+            "Mensagem: 'me lembra que em 2 horas tenho que revisar o relatório'",
             "Resposta:",
             "{",
             `  "dayOrDate": "${saoPauloNow.clone().add(2, 'hours').format('YYYY-MM-DD')}",`,
