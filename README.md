@@ -77,6 +77,6 @@ This project is the exclusive property of the author. Copying, distribution, mod
 ---
 
 👤 Desenvolvido por **João Andrade**  
-🎓 Engenharia da Computação | UFPB  
+🎓 Estudante de Engenharia da Computação | UFPB  
 📬 E-mail: [joaov.andrade.dev@gmail.com](mailto:joaov.andrade.dev@gmail.com)  
 📸 Instagram: [@andradev.joao](https://instagram.com/andradev.joao)
