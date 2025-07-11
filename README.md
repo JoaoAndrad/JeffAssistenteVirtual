@@ -1,6 +1,6 @@
 # 🤖 Assistente Virtual para WhatsApp — Finanças & Rotinas
 
-Um assistente inteligente para WhatsApp, projetado para ajudar no **gerenciamento financeiro pessoal** e na **organização de rotinas e tarefas**, com suporte a linguagem natural, gráficos, lembretes e muito mais.
+Olá, me chamo Jeff e sou seu assistente inteligente para WhatsApp, projetado para ajudar no **gerenciamento financeiro pessoal** e na **organização de rotinas e tarefas**, com suporte a linguagem natural, gráficos, lembretes e muito mais.
 
 ## 📌 Visão Geral
 
