@@ -54,6 +54,24 @@ async function processarComando(sock, msg, timezone, authorizedNumbers) {
     if (chatId.endsWith("@g.us")) {
         return;
     }
+
+    const messageContent = removerConteudoDaMensagem(msg);
+
+    // Detectar comando /testealarme logo no início
+    if (messageContent.toLowerCase().trim() === "/testealarme") {
+        const { enviarAlarmeFCM } = require("./rotinas/criarAlarme");
+        const mensagem = "Alarme de teste";
+        const horario = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutos depois
+        const resultado = await enviarAlarmeFCM(mensagem, horario);
+        await simularDigitar(sock, chatId);
+        if (resultado.success) {
+            await sock.sendMessage(chatId, { text: `✅ Alarme de teste enviado para o app Android!\n\nHorário: ${horario}` });
+        } else {
+            await sock.sendMessage(chatId, { text: `❌ Falha ao enviar alarme de teste.\n\nErro: ${resultado.error?.message || resultado.error}` });
+        }
+        return;
+    }
+
     if (receberPropostaPendente(chatId)) {
         logger.info(`[LOG] Proposta de transação pendente detectada para o chat ${chatId}. Encaminhando para tratarRespostaDePropostaDeTransacao.`);
         const userPhone = chatId.replace(/@s\.whatsapp\.net$/, "");
@@ -235,7 +253,7 @@ async function processarComando(sock, msg, timezone, authorizedNumbers) {
         return;
     }
 
-    const messageContent = removerConteudoDaMensagem(msg)
+    // ...existing code...
 
     // Redirecionar comando /pendentes ou /pendencias
     if (["/pendentes", "/pendencias"].includes(messageContent.toLowerCase().trim())) {
@@ -633,6 +651,21 @@ ${categoriasDetalhadas
                 logger.info(`[LOG] Comando identificado: editarRotina. Iniciando processamento...\n`);
                 await editarRotina(sock, chatId, msg);
                 break;
+
+            // Comando para teste de envio de alarme FCM
+            case "/testealarme":
+                const { enviarAlarmeFCM } = require("./rotinas/criarAlarme");
+                const titulo = "Alarme de Teste";
+                const mensagem = "Este é um alarme de teste enviado pelo bot.";
+                const horario = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutos depois
+                const resultado = await enviarAlarmeFCM(titulo, mensagem, horario, { prioridade: "alta" });
+                await simularDigitar(sock, chatId);
+                if (resultado.success) {
+                    await sock.sendMessage(chatId, { text: `✅ Alarme de teste enviado para o app Android!\n\nHorário: ${horario}` });
+                } else {
+                    await sock.sendMessage(chatId, { text: `❌ Falha ao enviar alarme de teste.\n\nErro: ${resultado.error?.message || resultado.error}` });
+                }
+                return;
 
             default:
                 logger.info(`[LOG] Nenhum comando identificado para a mensagem: "${messageContent}".\n`);

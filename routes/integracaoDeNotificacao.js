@@ -255,7 +255,44 @@ async function configurarEndpointNotificacao(app, sock) {
       });
     }
   });
-  registrarComContexto('INTEGRATION', 'Endpoints configurados:', { endpoints: ['/health', '/api/send-message'] });
+  registrarComContexto('INTEGRATION', 'Endpoints configurados:', { endpoints: ['/health', '/api/send-message', '/api/register-ip'] });
+
+  // Endpoint para registrar o IP do app no dispositivo do usuário
+  app.post('/api/register-ip', async (req, res) => {
+    const requestId = `ipreq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const { phone, ip } = req.body;
+    registrarComContexto('INTEGRATION', `[${requestId}] Requisição POST /api/register-ip recebida`, { phone, ip, userAgent: req.get('User-Agent') });
+    if (!phone || !ip) {
+      registrarComContexto('INTEGRATION', `[${requestId}] ❌ Erro: Telefone ou IP não fornecido`);
+      return res.status(400).json({
+        success: false,
+        error: 'Número de telefone e IP são obrigatórios',
+        requestId
+      });
+    }
+    const cleanPhone = phone.replace(/\D/g, '');
+    try {
+      // Salvar o IP no documento do usuário no Firebase
+      await db.collection('users').doc(cleanPhone).set({
+        lastAppIp: ip,
+        lastIpUpdatedAt: new Date().toISOString()
+      }, { merge: true });
+      registrarComContexto('INTEGRATION', `[${requestId}] ✅ IP registrado com sucesso para usuário ${cleanPhone}`);
+      res.status(200).json({
+        success: true,
+        message: 'IP registrado com sucesso',
+        requestId
+      });
+    } catch (error) {
+      registrarComContexto('INTEGRATION', `[${requestId}] ❌ Erro ao registrar IP`, { error: error.message });
+      res.status(500).json({
+        success: false,
+        error: 'Erro ao registrar IP',
+        details: error.message,
+        requestId
+      });
+    }
+  });
 }
 
 /**

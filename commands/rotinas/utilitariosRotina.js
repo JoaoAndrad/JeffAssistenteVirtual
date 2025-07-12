@@ -1,4 +1,14 @@
 const { obterRotinas, atualizarRotinas } = require("../firebaseFolder/rotinasFirebase");
+const { enviarAlarmeFCM } = require("./criarAlarme");
+/**
+ * Envia um alarme/lembrete para o app Android via FCM usando criarAlarme.js
+ * @param {string} mensagem - Mensagem do alarme/lembrete
+ * @param {string} horario - Horário do alarme (ISO string)
+ * @returns {Promise<{success: boolean, response?: any, error?: any}>}
+ */
+async function enviarAlarmeParaApp(mensagem, horario) {
+    return await enviarAlarmeFCM(mensagem, horario);
+}
 const schedule = require("node-schedule");
 const moment = require("moment-timezone");
 const { simularDigitar } = require("../utilitariosComandos");
@@ -158,7 +168,7 @@ function scheduleRoutine(id, time, days, message, repetition, sock, isTask, comp
                 console.log(`[LOG] Próximo lembrete agendado para rotina ID ${id}: ${nextReminder}`);
 
                 // Reagendar automaticamente para o próximo ciclo
-                scheduleRoutine(id, time, days, message, repetition, sock, isTask, completed, userId, nextReminder, type);
+                scheduleRoutine(id, time, days, message, repetition, sock, isTask, completed, userId, nextReminder, type, categoria);
             } else {
                 // Para rotinas unicas, marcar como inativa após o lembrete
                 // Se não for tarefa e não tem repetição, apagar a rotina
@@ -440,12 +450,44 @@ async function initializeSingleReminder(sock) {
 
     // Selecionar a última rotina salva
     const routine = routines[routines.length - 1];
-    const [id, time, days, message, status, repetition, type, isTask, completed, completionDate, userId, proximoLembrete] = routine;
+    // Suporta categoria na posição 16 se existir
+    const [id, time, days, message, status, repetition, type, isTask, completed, completionDate, userId, proximoLembrete, ultimaNotificacao, proximaNotificacao, ultimaRealizacao, proximaRealizacao, categoria] = routine;
 
     if (status === "Ativo") {
         console.log(`[DEBUG] Agendando última rotina salva ID ${id} com proximoLembrete: ${proximoLembrete}`);
 
-        // Chamar scheduleRoutine para agendar a nova rotina
+        // Se for alarme, enviar notificação para o app
+        if (categoria === "alarme") {
+            try {
+                // Enviar horário local (America/Sao_Paulo) como string para o FCM
+                let localTime;
+                if (proximoLembrete && proximoLembrete !== "N/A") {
+                    localTime = moment.tz(proximoLembrete, "YYYY-MM-DD HH:mm:ss", "America/Sao_Paulo").format("YYYY-MM-DD HH:mm:ss");
+                } else if (/^\d{4}-\d{2}-\d{2}$/.test(days) && /^\d{2}:\d{2}$/.test(time)) {
+                    localTime = moment.tz(`${days} ${time}`, "YYYY-MM-DD HH:mm", "America/Sao_Paulo").format("YYYY-MM-DD HH:mm:ss");
+                } else if (/^\d{2}:\d{2}$/.test(time)) {
+                    localTime = moment.tz(moment().format("YYYY-MM-DD") + ` ${time}`, "YYYY-MM-DD HH:mm", "America/Sao_Paulo").format("YYYY-MM-DD HH:mm:ss");
+                } else {
+                    localTime = moment.tz(time, "HH:mm", "America/Sao_Paulo").format("YYYY-MM-DD HH:mm:ss");
+                }
+                // Converter para ISO 8601 UTC, mantendo o horário local (sem ajuste de fuso)
+                const isoTime = moment.utc(localTime, "YYYY-MM-DD HH:mm:ss").toISOString();
+                console.log(`[ALARME] Enviando notificação para o app: "${message}" às ${isoTime}`);
+                const result = await enviarAlarmeFCM(String(message), String(isoTime));
+                console.log(`[ALARME] Notificação enviada via FCM:`, result);
+                await simularDigitar(sock, userId);
+                await sock.sendMessage(userId, {
+                    text: `🚨 *Alarme criado!*\n\nVocê recebeu uma notificação no seu dispositivo. Clique nela para ativar o alarme no app.\n\n🕒 *Horário:* ${time}\n📝 *Mensagem:* ${message}`
+                });
+            } catch (err) {
+                console.error(`[ALARME] Falha ao enviar alarme via FCM:`, err);
+                await simularDigitar(sock, userId);
+                await sock.sendMessage(userId, {
+                    text: `❌ *Erro ao enviar alarme para o app!* Tente novamente ou verifique sua conexão.`
+                });
+            }
+        }
+        // Chamar scheduleRoutine para agendar a nova rotina normalmente
         scheduleRoutine(id, time, days, message, repetition, sock, isTask === "Sim", completed, userId, proximoLembrete, type);
     }
     console.log("[LOG] Lembrete inicializado com sucesso para a última rotina salva.");
@@ -621,340 +663,6 @@ function calculateFirstReminder(time, days, repetition, type) {
     return now.clone().add(1, 'day').hour(hour).minute(minute).second(0).millisecond(0).format("YYYY-MM-DD HH:mm:ss");
 }
 
-/**
- * Analisa uma mensagem de rotina usando Groq LLM e retorna os campos estruturados.
- * Se mencionar um dia numeral (ex: "dia 7 tenho que...") e não for recorrente, agendar para o próximo mês se o dia já passou.
- * Sempre retorna os campos: dayOrDate, time, message, type, repetition (quando aplicável).
- * @param {string} texto
- * @returns {Promise<{dayOrDate: string, time: string, message: string, type: string, repetition?: string}|null>} Retorna os campos ou null se falhar
- */
-async function analisarRotinaViaGroq(texto) {
-    try {
-        const saoPauloNow = moment.tz("America/Sao_Paulo");
-        const dataAtual = saoPauloNow.format("YYYY-MM-DD");
-        const horaAtual = saoPauloNow.format("HH:mm");
-        const diaAtual = saoPauloNow.date();
-        const mesAtual = saoPauloNow.month() + 1;
-        const anoAtual = saoPauloNow.year();
-        // Função auxiliar para calcular próxima data para qualquer dia numeral
-        function proximaDataNumeral(dia) {
-            let diaNum = parseInt(dia, 10);
-            if (isNaN(diaNum) || diaNum < 1 || diaNum > 31) return null;
-            let data = moment.tz(`${anoAtual}-${mesAtual.toString().padStart(2, '0')}-${diaNum.toString().padStart(2, '0')}`, "YYYY-MM-DD", "America/Sao_Paulo");
-            if (data.isBefore(saoPauloNow, 'day')) {
-                data = data.add(1, 'month');
-            }
-            return data.format("YYYY-MM-DD");
-        }
-        const prompt = [
-            `Horário atual em São Paulo: ${dataAtual} ${horaAtual}`,
-            "Sua tarefa é extrair os campos estruturados da mensagem abaixo e convertê-la em um lembrete ou rotina.",
-            "Sempre responda SOMENTE em JSON válido, sem explicações, comentários ou texto adicional.",
-            "",
-            "🧠 Objetivo:",
-            "- Interpretar mensagens em linguagem natural para estruturar lembretes e rotinas com base no conteúdo textual.",
-            "📅 Regras para interpretação de datas:",
-            "- Use o horário atual informado no topo para base de cálculo.",
-            "- Quando o usuário mencionar apenas um dia numeral (ex: 'dia 10'), e o dia atual for maior que esse número, agende para o mês seguinte.",
-            "- Quando houver datas no formato DD/MM ou DD/MM/YYYY, normalize para 'YYYY-MM-DD'.",
-            "- Para dias da semana como 'terça-feira' 'terça' 'quarta-feira' 'próxima quarta' 'nessa quinta' 'essa quinta-feira', calcule a próxima ocorrência (nunca datas passadas).",
-            "- Palavras como 'amanhã', 'depois de amanhã', 'semana que vem' devem ser convertidas para a data correta baseada em 'dataAtual'.",
-            "",
-            "⏰ Regras para interpretação de tempo:",
-            "- Horários devem sempre ser convertidos para o formato 24h (ex: '8 da noite' -> '20:00').",
-            "- Interpretações relativas como 'em 2 horas', 'daqui a 30 minutos' devem ser calculadas com base em horaAtual.",
-            "- Se a mensagem não tiver horário explícito nem relativo, defina: \"time\": \"\"",
-            "",
-            "🔁 Regras para mensagens recorrentes:",
-            "- Termos como 'todo', 'toda', 'sempre', 'diariamente', 'semanalmente', 'mensalmente' indicam repetição.",
-            "- Use: type: 'repetitiva' e o campo repetition com: 'diariamente', 'semanalmente', 'mensalmente', etc.",
-            "- Exemplo: 'todo sábado', repetition: 'semanalmente', dayOrDate: 'sábado'",
-            "- Repetições numéricas: 'todo dia 10' -> dayOrDate: '10', repetition: 'mensalmente' type: 'repetitiva'",
-            "",
-            "🧼 Regras para o campo 'message':",
-            "- Remova termos desnecessários como: 'me lembra de', 'tenho que', 'preciso', 'vou', 'lembrar de', 'agendar', 'programar'.",
-            "- Mantenha a descrição limpa, direta e concisa.",
-            "",
-            "✅ Quando usar o campo 'isTask':",
-            "- Use \"isTask\": true para compromissos relevantes (reuniões, consultas, tomar remédio, pagar contas, tarefas com ação).",
-            "- Evite usar para eventos informais (ex: 'ver filme', 'ir ao parque').",
-            "",
-            "⚠️ Importante:",
-            "- Sempre retorne campos com aspas duplas. Use estrutura JSON válida.",
-            "- Caso algum dado esteja ausente (ex: sem horário), ainda assim responda com os demais campos e time como \"\".",
-            "- O campo 'Message' jamais pode ter informações que não estejam na mensagem original, se atente a isso, revise duas vezes o contexto da mensagem para garantir que a mensagem será devidamente retirada da frase, mesmo com os exemplos abaixo.",
-            "",
-            "📚 Exemplos de entrada e saída:",
-            "",
-            "Mensagem: 'dia 7 tenho que levar o carro no mecânico' (e hoje é dia 8 do mes)",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${proximaDataNumeral(7)}",`,
-            '  "message": "levar o carro no mecânico",',
-            '  "type": "unica",',
-            '  "isTask": true',
-            "}",
-            "",
-            "Mensagem: 'amanhã às 14:30 reunião com equipe'",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${saoPauloNow.clone().add(1, 'day').format('YYYY-MM-DD')}",`,
-            '  "time": "14:30",',
-            '  "message": "reunião com equipe",',
-            '  "type": "unica",',
-            '  "isTask": true',
-            "}",
-            "",
-            "Mensagem: 'todo dia 10 pagar o aluguel'",
-            "Resposta:",
-            "{",
-            '  "dayOrDate": "10",',
-            '  "message": "pagar o aluguel",',
-            '  "type": "repetitiva",',
-            '  "repetition": "mensalmente",',
-            '  "isTask": true',
-            "}",
-            "",
-            "Mensagem: 'daqui a 45 minutos ligar para o cliente'",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${saoPauloNow.clone().add(45, 'minutes').format('YYYY-MM-DD')}",`,
-            `  "time": "${saoPauloNow.clone().add(45, 'minutes').format('HH:mm')}",`,
-            '  "message": "ligar para o cliente",',
-            '  "type": "unica",',
-            '  "isTask": true',
-            "}",
-            "",
-            "Mensagem: 'me lembra daqui a 20 minutos eu vou tomar café'",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${saoPauloNow.clone().add(20, 'minutes').format('YYYY-MM-DD')}",`,
-            `  "time": "${saoPauloNow.clone().add(20, 'minutes').format('HH:mm')}",`,
-            '  "message": "tomar café",',
-            '  "type": "unica",',
-            '  "isTask": true',
-            "}",
-            "",
-            "Mensagem: 'daqui a 45 minutos ligar para o cliente'",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${saoPauloNow.clone().add(45, 'minutes').format('YYYY-MM-DD')}",`,
-            `  "time": "${saoPauloNow.clone().add(45, 'minutes').format('HH:mm')}",`,
-            '  "message": "ligar para o cliente",',
-            '  "type": "unica",',
-            '  "isTask": true',
-            "}",
-            "Mensagem: 'daqui 5 minutos enviar e-mail para o cliente'",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${saoPauloNow.clone().add(5, 'minutes').format('YYYY-MM-DD')}",`,
-            `  "time": "${saoPauloNow.clone().add(5, 'minutes').format('HH:mm')}",`,
-            '  "message": "ligar para o cliente",',
-            '  "type": "unica",',
-            '  "isTask": true',
-            "}",
-
-            "Mensagem: 'me lembra de tomar remédio em 15 minutos'",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${saoPauloNow.clone().add(15, 'minutes').format('YYYY-MM-DD')}",`,
-            `  "time": "${saoPauloNow.clone().add(15, 'minutes').format('HH:mm')}",`,
-            '  "message": "tomar remédio",',
-            '  "type": "unica",',
-            '  "isTask": true',
-            "}",
-
-            "Mensagem: 'me lembra que em 2 horas tenho que revisar o relatório'",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${saoPauloNow.clone().add(2, 'hours').format('YYYY-MM-DD')}",`,
-            `  "time": "${saoPauloNow.clone().add(2, 'hours').format('HH:mm')}",`,
-            '  "message": "revisar o relatório",',
-            '  "type": "unica",',
-            '  "isTask": true',
-            "}",
-
-            "Mensagem: 'em 5 horas sair para o aeroporto'",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${saoPauloNow.clone().add(5, 'hours').format('YYYY-MM-DD')}",`,
-            `  "time": "${saoPauloNow.clone().add(5, 'hours').format('HH:mm')}",`,
-            '  "message": "sair para o aeroporto",',
-            '  "type": "unica",',
-            '  "isTask": true',
-            "}",
-
-            "Mensagem: 'daqui 2 dias reunião com a equipe'",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${saoPauloNow.clone().add(2, 'days').format('YYYY-MM-DD')}",`,
-            '  "time": "",',
-            '  "message": "reunião com a equipe",',
-            '  "type": "unica",',
-            '  "isTask": true',
-            "}",
-
-            "Mensagem: 'daqui a 3 dias ir ao cinema'",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${saoPauloNow.clone().add(3, 'days').format('YYYY-MM-DD')}",`,
-            '  "time": "",',
-            '  "message": "ir ao cinema",',
-            '  "type": "unica"',
-            "}",
-            "Mensagem: 'revisar o TCC daqui a 2 dias'",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${saoPauloNow.clone().add(2, 'days').format('YYYY-MM-DD')}",`,
-            '  "time": "",',
-            '  "message": "revisar o TCC",',
-            '  "type": "unica",',
-            '  "isTask": true',
-            "}",
-            "Mensagem: 'Amanhã às 10h pegar os exames'",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${saoPauloNow.clone().add(1, 'day').format('YYYY-MM-DD')}",`,
-            '  "time": "10:00",',
-            '  "message": "pegar os exames",',
-            '  "type": "unica",',
-            '  "isTask": true',
-            "}",
-
-            "Mensagem: 'Todo sábado às 18h ir à academia'",
-            "Resposta:",
-            "{",
-            '  "dayOrDate": "sábado",',
-            '  "time": "18:00",',
-            '  "message": "ir à academia",',
-            '  "type": "repetitiva",',
-            '  "repetition": "semanalmente"',
-            "}",
-
-            "Mensagem: 'Me lembra de pagar o aluguel dia 10'",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${proximaDataNumeral(10)}",`,
-            '  "time": "",',
-            '  "message": "pagar o aluguel",',
-            '  "type": "unica",',
-            '  "isTask": true',
-            "}",
-
-            "Mensagem: 'Daqui a 30 minutos ligar para o João'",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${saoPauloNow.clone().add(30, 'minutes').format('YYYY-MM-DD')}",`,
-            `  "time": "${saoPauloNow.clone().add(30, 'minutes').format('HH:mm')}",`,
-            '  "message": "ligar para o João",',
-            '  "type": "unica",',
-            "}",
-
-            "Mensagem: 'Consulta médica em 2 dias às 9h'",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${saoPauloNow.clone().add(2, 'days').format('YYYY-MM-DD')}",`,
-            '  "time": "09:00",',
-            '  "message": "consulta médica",',
-            '  "type": "unica",',
-            '  "isTask": true',
-            "}",
-            "Mensagem: 'daqui uma semana entregar o projeto final'",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${saoPauloNow.clone().add(1, 'week').format('YYYY-MM-DD')}",`,
-            '  "time": "",',
-            '  "message": "entregar o projeto final",',
-            '  "type": "unica",',
-            '  "isTask": true',
-            '  "isRelativeTime": true',
-            "}",
-            "Mensagem: 'em meia hora devo escovar os dentes'",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${saoPauloNow.clone().add(30, 'minutes').format('YYYY-MM-DD')}",`,
-            `  "time": "${saoPauloNow.clone().add(30, 'minutes').format('HH:mm')}",`,
-            '  "message": "escovar os dentes",',
-            '  "type": "unica"',
-            '  "isRelativeTime": true',
-            "}",
-            "Mensagem: 'em 40 minutos devo sair'",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${saoPauloNow.clone().add(40, 'minutes').format('YYYY-MM-DD')}",`,
-            `  "time": "${saoPauloNow.clone().add(40, 'minutes').format('HH:mm')}",`,
-            '  "message": "sair",',
-            '  "type": "unica"',
-            '  "isRelativeTime": true',
-            "}",
-            "Mensagem: 'daqui duas semanas consulta com dentista às 09:00'",
-            "Resposta:",
-            "{",
-            `  "dayOrDate": "${saoPauloNow.clone().add(2, 'weeks').format('YYYY-MM-DD')}",`,
-            '  "time": "09:00",',
-            '  "message": "consulta com dentista",',
-            '  "type": "unica",',
-            '  "isTask": true',
-            '  "isRelativeTime": true',
-            "}",
-            `Mensagem: "${texto}"`
-        ].join('\n');
-
-
-        const resposta = await sendGroqChat(prompt, {
-            systemMessage: 'Você é um extrator de campos para criação de rotinas/lembretes. Responda apenas em JSON com os campos dayOrDate, time, message, type, repetition, isRelativeTime.'
-        });
-
-
-        if (!resposta) return null;
-        // Tentar extrair JSON da resposta
-        const jsonMatch = resposta.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) return null;
-
-
-        const data = JSON.parse(jsonMatch[0]);
-        console.log(`[GROQ][rotina] analisarRotinaViaGroq detectou: ${JSON.stringify(data)}`);
-
-        // Se Groq indicar que é horário relativo, validar o cálculo
-        if (data.isRelativeTime === true && data.time) {
-            // Tenta extrair o valor relativo do texto
-            const matchMin = texto.match(/(\d+)\s*minuto|minutos/i);
-            const matchHour = texto.match(/(\d+)\s*hora|horas/i);
-            let esperado;
-            if (matchMin) {
-                const min = parseInt(matchMin[1], 10);
-                esperado = saoPauloNow.clone().add(min, 'minutes');
-            } else if (matchHour) {
-                const hr = parseInt(matchHour[1], 10);
-                esperado = saoPauloNow.clone().add(hr, 'hours');
-            }
-            if (esperado) {
-                // Verifica se o time retornado bate com o esperado
-                const timeRetornado = moment.tz(`${data.dayOrDate} ${data.time}`, "YYYY-MM-DD HH:mm", "America/Sao_Paulo");
-                const diff = Math.abs(esperado.diff(timeRetornado, 'minutes'));
-                if (diff > 2) { // tolerância de 2 minutos
-                    // Recalcula
-                    data.dayOrDate = esperado.format('YYYY-MM-DD');
-                    data.time = esperado.format('HH:mm');
-                    console.log('[GROQ][rotina] Horário relativo ajustado:', data.dayOrDate, data.time);
-                }
-            }
-        }
-
-        return {
-            dayOrDate: data.dayOrDate?.toString().trim() || '',
-            time: data.time?.toString().trim() || '',
-            message: data.message?.toString().trim() || '',
-            type: data.type?.toString().trim() || 'unica',
-            repetition: data.repetition?.toString().trim() || undefined,
-            isTask: typeof data.isTask === 'boolean' ? data.isTask : undefined
-        };
-    } catch (e) {
-        console.warn(`[GROQ][rotina] Falha ao analisar rotina: ${e.message}`);
-        return null;
-    }
-}
-
 module.exports = {
     validarFormatoHora,
     formatRoutineResponse,
@@ -970,5 +678,5 @@ module.exports = {
     calculateNextReminder,
     calculateFirstReminder,
     processTaskCompletion,
-    analisarRotinaViaGroq,
+    enviarAlarmeParaApp,
 };

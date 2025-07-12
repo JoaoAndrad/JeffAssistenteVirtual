@@ -38,6 +38,7 @@ async function criarRotina(routineData) {
             proximaNotificacao: routineData.proximaNotificacao || null,
             ultimaRealizacao: routineData.ultimaRealizacao || null,
             proximaRealizacao: routineData.proximaRealizacao || null,
+            categoria: routineData.categoria || "lembrete",
             version: "1.0", // Versão da estrutura de dados
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
@@ -66,8 +67,11 @@ async function obterRotinas() {
 
         const routines = [];
         const routinesToDelete = [];
+        let debugRaw = [];
+        let debugFiltered = [];
         snapshot.forEach(doc => {
             const data = doc.data();
+            debugRaw.push({ ...data });
             // Verificar se deve ser removida
             const isUnicaInativa = data.type === "unica" && (data.status === "Inativo" || data.status === "nao_realizada");
             const isTarefaNaoRepetitivaSuspensa = data.type !== "repetitiva" && data.status === "nao_realizada";
@@ -76,7 +80,7 @@ async function obterRotinas() {
                 return; // Não adiciona à lista
             }
             // Converter para formato de array compatível com o código existente
-            routines.push([
+            const arr = [
                 data.id,
                 data.time,
                 data.days,
@@ -92,8 +96,11 @@ async function obterRotinas() {
                 data.ultimaNotificacao || null,
                 data.proximaNotificacao || null,
                 data.ultimaRealizacao || null,
-                data.proximaRealizacao || null
-            ]);
+                data.proximaRealizacao || null,
+                data.categoria || "lembrete" // Garante que categoria sempre esteja presente
+            ];
+            debugFiltered.push(arr);
+            routines.push(arr);
         });
 
         // Deletar rotinas inválidas
@@ -103,7 +110,10 @@ async function obterRotinas() {
             }).catch(() => {});
         }
 
+        console.log("[DEBUG] Dados brutos retornados do Firebase:", JSON.stringify(debugRaw, null, 2));
+        console.log("[DEBUG] Dados filtrados (após remoção de inválidas):", JSON.stringify(debugFiltered, null, 2));
         console.log(`[LOG] ${routines.length} rotinas recuperadas do Firebase (após limpeza)`);
+        console.log('[DEBUG] routines (array final retornado):', JSON.stringify(routines, null, 2));
         return routines;
     } catch (error) {
         console.error("❌ Erro ao obter rotinas do Firebase:", error);

@@ -1,6 +1,6 @@
 const { criarRotina: criarRotinaFirebase, obterRotinas, getNextRoutineId } = require("../firebaseFolder/rotinasFirebase");
 const { validarFormatoHora, initializeSingleReminder, pegarDataHoje, calculateFirstReminder } = require("./utilitariosRotina");
-const { analisarRotinaViaGroq } = require("./utilitariosRotina");
+const { analisarRotinaViaGroq } = require("./promptRotinas");
 const schedule = require("node-schedule");
 const moment = require("moment-timezone");
 const { removerConteudoDaMensagem, simularDigitar } = require("../utilitariosComandos");
@@ -144,10 +144,15 @@ async function criarRotina(sock, chatId, msg) {
             `🔁 *Repetição:* ${groqData.repetition || "Não informado"}\n` +
             `📌 *É tarefa:* ${typeof groqData.isTask === 'boolean' ? (groqData.isTask ? "Sim" : "Não") : "Não informado"}`;
 
+        // Se for alarme, adicionar destaque
+        if (groqData.categoria === "alarme") {
+            resumo += `\n\n🚨 *Categoria: Alarme*`;
+        }
+
         await simularDigitar(sock, chatId);
         await sock.sendMessage(chatId, {
             text: resumo +
-                "\n\nDeseja salvar assim?\nDigite:\n✅ \Confirmar\n✏️ editar\n❌ cancelar\n\nSe não responder em 30 segundos, será criada automaticamente."
+                "\n\nDeseja salvar assim?\nDigite:\n✅ \`Confirmar\`\n\n✏️ \`editar\`\n\n❌ \`cancelar\`\n\nSe não responder em 30 segundos, será criada automaticamente."
         });
 
         // Criar estado pendente para confirmação/edição/cancelamento
@@ -170,6 +175,9 @@ async function criarRotina(sock, chatId, msg) {
                 processedData.type = groqData.type;
                 processedData.repetition = groqData.repetition;
                 processedData.isTask = groqData.isTask;
+                if (groqData.categoria === "alarme") {
+                    processedData.categoria = "alarme";
+                }
                 await finalizeRoutineCreation(sock, chatId, processedData);
             }
         }, 30 * 1000);
@@ -411,6 +419,9 @@ async function tratarDetalhesRotinas(sock, chatId, messageContent) {
                 `🔁 *Repetição:* ${details.repetition || "Não informado"}\n` +
                 `📌 *É tarefa:* ${typeof details.isTask === 'boolean' ? (details.isTask ? "Sim" : "Não") : "Não informado"}`;
             details.step = "confirmarResumo";
+            if (groqData.categoria === "alarme") {
+            resumo += `\n\n🚨 *Categoria: Alarme*`;
+            }
             await simularDigitar(sock, chatId);
             await sock.sendMessage(chatId, {
                 text: resumo +
@@ -431,6 +442,7 @@ async function tratarDetalhesRotinas(sock, chatId, messageContent) {
                     processedData.type = details.type;
                     processedData.repetition = details.repetition;
                     processedData.isTask = details.isTask;
+                    processedData.categoria = details.categoria || "lembrete"; // Define categoria padrão
                     await finalizeRoutineCreation(sock, chatId, processedData);
                 }
             }, 30 * 1000);
@@ -449,6 +461,7 @@ async function tratarDetalhesRotinas(sock, chatId, messageContent) {
                 processedData.type = details.type;
                 processedData.repetition = details.repetition;
                 processedData.isTask = details.isTask;
+                processedData.categoria = details.categoria || "lembrete"; // Define categoria padrão
                 await finalizeRoutineCreation(sock, chatId, processedData);
 
 
@@ -497,6 +510,7 @@ async function tratarDetalhesRotinas(sock, chatId, messageContent) {
                 processedData.type = details.type;
                 processedData.repetition = details.repetition;
                 processedData.isTask = details.isTask;
+                processedData.categoria = details.categoria || "lembrete"; // Define categoria padrão
                 await finalizeRoutineCreation(sock, chatId, processedData);
                 return;
             }
@@ -927,6 +941,11 @@ async function finalizeRoutineCreation(sock, chatId, details) {
             proximaNotificacao = proximoLembrete;
         }
 
+        // Preservar categoria do details, mesmo após processarDadosRotina
+        let categoria = details.categoria || "lembrete";
+        if (!categoria && details.message && /alarme|acordar|despertar|despertador/i.test(details.message)) {
+            categoria = "alarme";
+        }
         const routineData = {
             id: nextId,
             time: details.time || "08:00",
@@ -945,7 +964,8 @@ async function finalizeRoutineCreation(sock, chatId, details) {
             ultimaNotificacao,
             proximaNotificacao,
             ultimaRealizacao,
-            proximaRealizacao
+            proximaRealizacao,
+            categoria: categoria
         };
 
         console.log(`[LOG] finalizeRoutineCreation - Dados da rotina preparados: ${JSON.stringify(routineData)}`);

@@ -11,10 +11,13 @@ Este projeto utiliza a biblioteca [Baileys](https://github.com/WhiskeySockets/Ba
 As seguintes funcionalidades estão atualmente em construção para expandir ainda mais a capacidade do assistente:
 
 - 🔗 Integração com **Google Calendar** para sincronização bidirecional de eventos
-- ⏰ Sistema nativo de **alarmes e lembretes inteligentes** além das mensagens enviadas via WhatsApp
 - 🗣️ Integração com **Alexa** através de uma skill personalizada para comandos por voz, comunicação da alexa direto com a API REST
 
-Esses recursos permitirão eu Jeff atue como uma ponte entre sua rotina digital e seus dispositivos inteligentes.
+## 🚀 Novidade: Sistema Nativo de Alarmes Pronto!
+
+O sistema nativo de **alarmes e lembretes inteligentes** já está disponível e sincroniza diretamente com o aplicativo padrão de alarmes do usuário no Android. Ao criar um alarme pelo WhatsApp, o assistente envia uma notificação push que ativa o alarme no app de relógio do dispositivo, garantindo integração total e praticidade.
+
+Esse recurso permite que Jeff atue como uma ponte entre sua rotina digital e seus dispositivos inteligentes.
 
 ## 🔧 Funcionalidades
 
