@@ -260,9 +260,20 @@ async function processarComando(sock, msg, timezone, authorizedNumbers) {
         await tratarComandoPendentes(sock, chatId);
         return;
     }
-    // Se está aguardando seleção de pendência
-    if (estadoSelecionarPendentes[chatId]) {
-        await tratarSelecaoPendentes(sock, chatId, messageContent);
+    // Redirecionar comando /editarrotinas
+    const { tratarComandoEditarRotinas, tratarSelecaoEditarRotinas, tratarEdicaoDeCampoRotina, estadoSelecionarRotinas } = require("./rotinas/editarRotina");
+    if (messageContent.toLowerCase().trim() === "/editarrotinas") {
+        await tratarComandoEditarRotinas(sock, chatId);
+        return;
+    }
+    // Se está aguardando seleção de rotina para edição
+    if (estadoSelecionarRotinas[chatId]) {
+        // Se já selecionou rotina, trata edição de campo
+        if (estadoSelecionarRotinas[chatId].rotinaSelecionada) {
+            await tratarEdicaoDeCampoRotina(sock, chatId, messageContent);
+        } else {
+            await tratarSelecaoEditarRotinas(sock, chatId, messageContent);
+        }
         return;
     }
 
